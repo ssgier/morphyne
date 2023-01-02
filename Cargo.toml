@@ -10,3 +10,7 @@ crate-type = ["cdylib"]
 
 [dependencies]
 pyo3 = { version = "0.17.3", features = ["extension-module"] }
+morphine = { path = "../morphine" }
+serde = { version = "1.0.147", features = ["derive"] }
+serde_yaml = "0.9.14"
+rand = "0.8.5"
