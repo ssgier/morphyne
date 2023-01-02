@@ -12,19 +12,10 @@ class StateSnapshot:
 
 class TickResult:
 
-    def __init__(self, t, spiking_out_channel_ids: list[int], spiking_nids: list[int], state_snapshot: StateSnapshot, synaptic_transmission_count: int) -> None:
-        self.t = t
-        self.spiking_out_channel_ids = spiking_out_channel_ids
-        self.spiking_nids = spiking_nids
-        self.state_snapshot = state_snapshot
-        self.synaptic_transmission_count = synaptic_transmission_count
-
-
-class BatchTickResult:
-
-    def __init__(self, out_channel_spikes: pd.DataFrame, neuron_spikes: pd.DataFrame, synaptic_transmission_count: int) -> None:
+    def __init__(self, out_channel_spikes: pd.DataFrame, neuron_spikes: pd.DataFrame, state_snapshot: StateSnapshot, synaptic_transmission_count: int) -> None:
         self.out_channel_spikes = out_channel_spikes
         self.neuron_spikes = neuron_spikes
+        self.state_snapshot = state_snapshot
         self.synaptic_transmission_count = synaptic_transmission_count
 
 
@@ -49,6 +40,13 @@ class Instance:
             inner_result.spiking_out_channel_ids)
         spiking_nids = np.array(inner_result.spiking_nids)
 
+        neuron_spikes_data = {"t": inner_result.t, "nid": spiking_nids}
+        out_channel_spikes_data = {"t": inner_result.t,
+                                   "out_channel_id": spiking_out_channel_ids}
+
+        df_neuron_spikes = pd.DataFrame(neuron_spikes_data)
+        df_out_channel_spikes = pd.DataFrame(out_channel_spikes_data)
+
         state_snapshot = None
         if extract_state_snapshot:
             membrane_voltages = np.array(
@@ -60,15 +58,19 @@ class Instance:
             state_snapshot = StateSnapshot(
                 membrane_voltages, df_synapse_states)
 
-        return TickResult(inner_result.t, spiking_out_channel_ids, spiking_nids, state_snapshot, inner_result.synaptic_transmission_count)
+        return TickResult(df_out_channel_spikes, df_neuron_spikes, state_snapshot, inner_result.synaptic_transmission_count)
 
-    def tick_until(self, t: int) -> BatchTickResult:
-        inner_result = self._inner.tick_until(t)
-        out_channel_spikes_data = {"t": inner_result.out_channel_spikes_ts,
-                                   "out_channel_id": inner_result.out_channel_spikes_ids}
-        neuron_spikes_data = {
-            "t": inner_result.neuron_spikes_ts, "nid": inner_result.neuron_spikes_ids}
-        return BatchTickResult(pd.DataFrame(out_channel_spikes_data), pd.DataFrame(neuron_spikes_data), inner_result.synaptic_transmission_count)
+    def tick_until(self, t: int, ignore_output=False) -> TickResult:
+        if ignore_output:
+            self._inner.tick_until(t)
+            return None
+        else:
+            inner_result = self._inner.tick_until(t)
+            out_channel_spikes_data = {"t": inner_result.out_channel_spikes_ts,
+                                       "out_channel_id": inner_result.out_channel_spikes_ids}
+            neuron_spikes_data = {
+                "t": inner_result.neuron_spikes_ts, "nid": inner_result.neuron_spikes_ids}
+            return TickResult(pd.DataFrame(out_channel_spikes_data), pd.DataFrame(neuron_spikes_data), None, inner_result.synaptic_transmission_count)
 
     def set_reward_rate(self, reward_rate):
         self._inner.reward_rate = reward_rate

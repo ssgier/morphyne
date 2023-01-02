@@ -173,6 +173,17 @@ impl Instance {
         }
     }
 
+    fn tick_until_ignore_output(&mut self, t: usize) {
+        let mut tick_input = TickInput::new();
+
+        while self.inner.get_tick_period() < t {
+            tick_input.reset();
+            tick_input.reward = self.reward_rate;
+            self.add_non_coherent_stimulation(&mut tick_input);
+            self.inner.tick(&tick_input).unwrap();
+        }
+    }
+
     fn get_t(&self) -> usize {
         self.inner.get_tick_period()
     }

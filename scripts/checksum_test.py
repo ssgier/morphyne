@@ -4,7 +4,7 @@ import unittest
 
 
 class ChecksumTest(unittest.TestCase):
-    def test(self):
+    def test_vs_inner(self):
         instance = mp.create_from_yaml(params_template.params_yaml)
         instance.set_non_coherent_stimulation_rate(5 / 800)
         instance.set_reward_rate(0.002)
@@ -22,12 +22,26 @@ class ChecksumTest(unittest.TestCase):
         instance.set_non_coherent_stimulation_rate(0.0)
         tick_result = instance.tick(extract_state_snapshot=True)
 
+        self.check_single_tick_result(tick_result)
+
+    def test_ignore_output(self):
+        instance = mp.create_from_yaml(params_template.params_yaml)
+        instance.set_non_coherent_stimulation_rate(5 / 800)
+        instance.set_reward_rate(0.002)
+        t_stop = 1000
+        instance.tick_until(t_stop, ignore_output=True)
+        instance.set_non_coherent_stimulation_rate(0.0)
+        tick_result = instance.tick(extract_state_snapshot=True)
+        self.check_single_tick_result(tick_result)
+
+    def check_single_tick_result(self, tick_result):
         voltage_checksum = tick_result.state_snapshot.membrane_voltages.sum()
         synapse_state_checksum = tick_result.state_snapshot.synapse_states.product(
             axis=1).sum()
 
-        self.assertEqual(tick_result.spiking_nids.sum(), 17057)
-        self.assertEqual(tick_result.spiking_out_channel_ids.sum(), 1857)
+        self.assertEqual(tick_result.neuron_spikes.nid.sum(), 17057)
+        self.assertEqual(
+            tick_result.out_channel_spikes.out_channel_id.sum(), 1857)
         self.assertEqual(tick_result.synaptic_transmission_count, 627)
         self.assertAlmostEqual(voltage_checksum, 102.19031620648457)
         self.assertAlmostEqual(synapse_state_checksum,
