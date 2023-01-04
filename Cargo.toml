@@ -14,3 +14,4 @@ morphine = { path = "../morphine" }
 serde = { version = "1.0.147", features = ["derive"] }
 serde_yaml = "0.9.14"
 rand = "0.8.5"
+serde_json = "1.0.91"

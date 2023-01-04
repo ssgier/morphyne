@@ -1,6 +1,10 @@
-use morphine::instance::{self, TickInput};
+use morphine::{
+    instance::{self, TickInput},
+    params::InstanceParams,
+};
 use pyo3::{exceptions::PyValueError, prelude::*};
 use rand::{rngs::StdRng, seq::SliceRandom, SeedableRng};
+use serde::de::Error;
 
 use std::iter;
 
@@ -204,8 +208,16 @@ impl Instance {
 
 #[pyfunction]
 fn create_from_yaml(yaml_str: &str) -> PyResult<Instance> {
-    let params =
-        serde_yaml::from_str(yaml_str).map_err(|error| PyValueError::new_err(error.to_string()))?;
+    create_from_deser_result(serde_yaml::from_str(yaml_str))
+}
+
+#[pyfunction]
+fn create_from_json(json_str: &str) -> PyResult<Instance> {
+    create_from_deser_result(serde_json::from_str(json_str))
+}
+
+fn create_from_deser_result<E: Error>(result: Result<InstanceParams, E>) -> PyResult<Instance> {
+    let params = result.map_err(|error| PyValueError::new_err(error.to_string()))?;
 
     let instance = instance::create_instance(params)
         .map_err(|error| PyValueError::new_err(error.to_string()))?;
@@ -225,5 +237,6 @@ fn create_from_yaml(yaml_str: &str) -> PyResult<Instance> {
 #[pymodule]
 fn morphyne(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(create_from_yaml, m)?)?;
+    m.add_function(wrap_pyfunction!(create_from_json, m)?)?;
     Ok(())
 }

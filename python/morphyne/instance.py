@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 from .morphyne import create_from_yaml as create_from_yaml_inner
+from .morphyne import create_from_json as create_from_json_inner
 
 
 class StateSnapshot:
@@ -21,6 +22,10 @@ class TickResult:
 
 def create_from_yaml(params_yaml: str):
     return Instance(create_from_yaml_inner(params_yaml))
+
+
+def create_from_json(params_json: str):
+    return Instance(create_from_json_inner(params_json))
 
 
 class Instance:
