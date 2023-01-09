@@ -70,6 +70,9 @@ struct StateSnapshot {
     post_syn_nids: Vec<usize>,
 
     #[pyo3(get)]
+    conduction_delays: Vec<u8>,
+
+    #[pyo3(get)]
     weights: Vec<f32>,
 }
 
@@ -116,6 +119,11 @@ impl Instance {
                 .iter()
                 .map(|syn_state| syn_state.post_syn_nid)
                 .collect();
+            let conduction_delays = inner_snapshot
+                .synapse_states
+                .iter()
+                .map(|syn_state| syn_state.conduction_delay)
+                .collect();
             let weights = inner_snapshot
                 .synapse_states
                 .iter()
@@ -126,6 +134,7 @@ impl Instance {
                 membrane_voltages,
                 pre_syn_nids,
                 post_syn_nids,
+                conduction_delays,
                 weights,
             })
         } else {
@@ -222,8 +231,7 @@ fn create_from_deser_result<E: Error>(result: Result<InstanceParams, E>) -> PyRe
     let instance = instance::create_instance(params)
         .map_err(|error| PyValueError::new_err(error.to_string()))?;
 
-    let non_coherent_stimulation_nids =
-        (0..(instance.get_num_neurons() - instance.get_num_out_channels())).collect::<Vec<_>>();
+    let non_coherent_stimulation_nids = (0..(instance.get_num_neurons())).collect::<Vec<_>>();
 
     Ok(Instance {
         inner: instance,

@@ -58,6 +58,7 @@ class Instance:
                 inner_result.state_snapshot.membrane_voltages)
             synapse_state_data = {"pre_syn_nid": inner_result.state_snapshot.pre_syn_nids,
                                   "post_syn_nid": inner_result.state_snapshot.post_syn_nids,
+                                  "conduction_delay": inner_result.state_snapshot.conduction_delays,
                                   "weight": inner_result.state_snapshot.weights}
             df_synapse_states = pd.DataFrame(synapse_state_data)
             state_snapshot = StateSnapshot(
