@@ -15,9 +15,9 @@ class ChecksumTest(unittest.TestCase):
         channel_spike_checksum = tick_result.out_channel_spikes.product(
             axis=1).sum()
 
-        self.assertEqual(neuron_spike_checksum, 9524113178)
-        self.assertEqual(channel_spike_checksum, 877227491)
-        self.assertEqual(tick_result.synaptic_transmission_count, 5571037)
+        self.assertEqual(neuron_spike_checksum, 9325888458)
+        self.assertEqual(channel_spike_checksum, 857971287)
+        self.assertEqual(tick_result.synaptic_transmission_count, 5456365)
 
         instance.set_non_coherent_stimulation_rate(0.0)
         tick_result = instance.tick(extract_state_snapshot=True)
@@ -39,13 +39,13 @@ class ChecksumTest(unittest.TestCase):
         synapse_state_checksum = tick_result.state_snapshot.synapse_states.product(
             axis=1).sum()
 
-        self.assertEqual(tick_result.neuron_spikes.nid.sum(), 34893)
+        self.assertEqual(tick_result.neuron_spikes.nid.sum(), 39115)
         self.assertEqual(
-            tick_result.out_channel_spikes.out_channel_id.sum(), 3693)
-        self.assertEqual(tick_result.synaptic_transmission_count, 1121)
-        self.assertAlmostEqual(voltage_checksum, 94.24314316245727)
+            tick_result.out_channel_spikes.out_channel_id.sum(), 4715)
+        self.assertEqual(tick_result.synaptic_transmission_count, 1525)
+        self.assertAlmostEqual(voltage_checksum, 79.48388550709933)
         self.assertAlmostEqual(synapse_state_checksum,
-                               95402018205.22128, places=2)
+                               94369097433.76978, places=2)
 
 
 if __name__ == '__main__':

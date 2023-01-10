@@ -3,9 +3,9 @@ use morphine::{
     params::InstanceParams,
 };
 use pyo3::{exceptions::PyValueError, prelude::*};
-use rand::{rngs::StdRng, seq::SliceRandom, SeedableRng};
+use rand::{prelude::Distribution, rngs::StdRng, seq::SliceRandom, SeedableRng};
 use serde::de::Error;
-
+use statrs::distribution::Poisson;
 use std::iter;
 
 #[pyclass]
@@ -204,14 +204,21 @@ impl Instance {
 
 impl Instance {
     fn add_non_coherent_stimulation(&mut self, tick_input: &mut TickInput) {
-        let num_spikes = (self.non_coherent_stimulation_rate
-            * self.non_coherent_stimulation_nids.len() as f64) as usize;
+        if self.non_coherent_stimulation_rate > 0.0 {
+            let num_stimulus_spikes_dist = Poisson::new(
+                self.non_coherent_stimulation_rate
+                    * self.non_coherent_stimulation_nids.len() as f64,
+            )
+            .unwrap();
 
-        tick_input.force_spiking_nids.extend(
-            self.non_coherent_stimulation_nids
-                .choose_multiple(&mut self.rng, num_spikes)
-                .copied(),
-        )
+            let num_spikes = num_stimulus_spikes_dist.sample(&mut self.rng) as usize;
+
+            tick_input.force_spiking_nids.extend(
+                self.non_coherent_stimulation_nids
+                    .choose_multiple(&mut self.rng, num_spikes)
+                    .copied(),
+            )
+        }
     }
 }
 
