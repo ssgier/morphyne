@@ -1,0 +1,115 @@
+import morphyne as mp
+import unittest
+import json
+import pandas as pd
+from pandas.testing import assert_frame_equal
+
+
+class IntegrationTests(unittest.TestCase):
+
+    def test_stimulus_single_ticks(self):
+        instance = prepare_instance()
+        result = None
+
+        while instance.get_t() < 110:
+            result = instance.tick(prepend_to_result=result)
+        self.check_result(result)
+
+    def test_stimulus_batch(self):
+        instance = prepare_instance()
+        result = instance.tick_until(110)
+        self.check_result(result)
+
+    def check_result(self, result: pd.DataFrame):
+        expected_out_channel_spikes = pd.DataFrame(
+            {"t": [103, 104, 104, 108], "out_channel_id": [0, 2, 2, 1]})
+
+        expected_neuron_spikes = pd.DataFrame(
+            {"t": [102, 103, 103, 103, 103, 104, 104, 104, 105, 108, 109],
+                "nid": [3, 1, 1, 2, 11, 7, 13, 13, 2, 12, 8]}
+        )
+
+        assert_frame_equal(result.out_channel_spikes,
+                           expected_out_channel_spikes)
+
+        assert_frame_equal(result.neuron_spikes, expected_neuron_spikes)
+
+
+def prepare_instance() -> mp.Instance:
+    mp_params = {
+        "layers": [
+            {
+                "num_neurons": 6,
+                "neuron_params": {
+                    "tau_membrane": 10,
+                    "refractory_period": 1,
+                    "reset_voltage": 0,
+                    "t_cutoff_coincidence": 20,
+                    "adaptation_threshold": 1,
+                    "tau_threshold": 50,
+                    "voltage_floor": 0
+                }
+            },
+            {
+                "num_neurons": 5,
+                "neuron_params": {
+                    "tau_membrane": 10,
+                    "refractory_period": 1,
+                    "reset_voltage": 0,
+                    "t_cutoff_coincidence": 20,
+                    "adaptation_threshold": 1,
+                    "tau_threshold": 50,
+                    "voltage_floor": 0
+                }
+            },
+            {
+                "num_neurons": 3,
+                "neuron_params": {
+                    "tau_membrane": 10,
+                    "refractory_period": 1,
+                    "reset_voltage": 0,
+                    "t_cutoff_coincidence": 20,
+                    "adaptation_threshold": 1,
+                    "tau_threshold": 50,
+                    "voltage_floor": 0
+                }
+            }
+        ],
+        "layer_connections": [
+        ],
+        "technical_params": {
+            "num_threads": 1,
+            "pin_threads": False
+        }
+    }
+
+    instance = mp.create_from_json(json.dumps(mp_params))
+    instance.tick_until(100)
+
+    in_channel_spikes = pd.DataFrame(
+        {"t": [3, 3, 5], "in_channel_id": [1, 2, 2]})
+    force_out_channel_spikes = pd.DataFrame(
+        {"t": [3, 4], "out_channel_id": [0, 2]})
+    force_neuron_spikes = pd.DataFrame({"t": [3, 4, 4], "nid": [1, 7, 13]})
+
+    stimulus_0 = mp.create_stimulus(in_channel_spikes=in_channel_spikes,
+                                    force_out_channel_spikes=force_out_channel_spikes, force_neuron_spikes=force_neuron_spikes)
+
+    in_channel_spikes = pd.DataFrame(
+        {"t": [1], "in_channel_id": [3]})
+    force_out_channel_spikes = pd.DataFrame(
+        {"t": [7], "out_channel_id": [1]})
+    force_neuron_spikes = pd.DataFrame({"t": [8], "nid": [8]})
+
+    stimulus_1 = mp.create_stimulus(in_channel_spikes=in_channel_spikes,
+                                    force_out_channel_spikes=force_out_channel_spikes, force_neuron_spikes=force_neuron_spikes)
+
+    instance.apply_stimulus(stimulus_0)
+    instance.tick()
+    instance.apply_stimulus(stimulus_1)
+
+    return instance
+
+
+if __name__ == "__main__":
+    unittest.main()

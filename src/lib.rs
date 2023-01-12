@@ -6,7 +6,7 @@ use pyo3::{exceptions::PyValueError, prelude::*};
 use rand::{prelude::Distribution, rngs::StdRng, seq::SliceRandom, SeedableRng};
 use serde::de::Error;
 use statrs::distribution::Poisson;
-use std::iter;
+use std::{collections::VecDeque, iter};
 
 #[pyclass]
 struct Instance {
@@ -19,6 +19,34 @@ struct Instance {
 
     #[pyo3(get, set)]
     non_coherent_stimulation_rate: f64,
+
+    in_channel_stimuli: Vec<VecDeque<(usize, usize)>>,
+
+    force_out_channel_stimuli: Vec<VecDeque<(usize, usize)>>,
+
+    force_neuron_stimuli: Vec<VecDeque<(usize, usize)>>,
+}
+
+#[pyclass]
+#[derive(Debug)]
+struct Stimulus {
+    #[pyo3(set)]
+    in_channel_spikes_ts: Vec<usize>,
+
+    #[pyo3(set)]
+    in_channel_spikes_ids: Vec<usize>,
+
+    #[pyo3(set)]
+    force_out_channel_spikes_ts: Vec<usize>,
+
+    #[pyo3(set)]
+    force_out_channel_spikes_ids: Vec<usize>,
+
+    #[pyo3(set)]
+    force_neuron_spikes_ts: Vec<usize>,
+
+    #[pyo3(set)]
+    force_neuron_spikes_ids: Vec<usize>,
 }
 
 #[pyclass]
@@ -94,7 +122,7 @@ impl Instance {
             extract_state_snapshot,
         };
 
-        self.add_non_coherent_stimulation(&mut tick_input);
+        self.add_stimulation(&mut tick_input);
 
         let inner_result = self
             .inner
@@ -162,7 +190,8 @@ impl Instance {
         while self.inner.get_tick_period() < t {
             tick_input.reset();
             tick_input.reward = self.reward_rate;
-            self.add_non_coherent_stimulation(&mut tick_input);
+            self.add_stimulation(&mut tick_input);
+
             let tick_result = self.inner.tick(&tick_input).unwrap();
 
             out_channel_spikes_ts.extend(
@@ -192,8 +221,44 @@ impl Instance {
         while self.inner.get_tick_period() < t {
             tick_input.reset();
             tick_input.reward = self.reward_rate;
-            self.add_non_coherent_stimulation(&mut tick_input);
+            self.add_stimulation(&mut tick_input);
             self.inner.tick(&tick_input).unwrap();
+        }
+    }
+
+    fn apply_stimulus(&mut self, stimulus: &Stimulus) {
+        if !stimulus.in_channel_spikes_ts.is_empty() {
+            let in_channel_stimulus: VecDeque<_> = stimulus
+                .in_channel_spikes_ts
+                .iter()
+                .map(|t| t + self.get_t())
+                .zip(stimulus.in_channel_spikes_ids.iter().copied())
+                .collect();
+
+            self.in_channel_stimuli.push(in_channel_stimulus);
+        }
+
+        if !stimulus.force_out_channel_spikes_ts.is_empty() {
+            let force_out_channel_stimulus: VecDeque<_> = stimulus
+                .force_out_channel_spikes_ts
+                .iter()
+                .map(|t| t + self.get_t())
+                .zip(stimulus.force_out_channel_spikes_ids.iter().copied())
+                .collect();
+
+            self.force_out_channel_stimuli
+                .push(force_out_channel_stimulus);
+        }
+
+        if !stimulus.force_neuron_spikes_ts.is_empty() {
+            let force_neuron_stimulus: VecDeque<_> = stimulus
+                .force_neuron_spikes_ts
+                .iter()
+                .map(|t| t + self.get_t())
+                .zip(stimulus.force_neuron_spikes_ids.iter().copied())
+                .collect();
+
+            self.force_neuron_stimuli.push(force_neuron_stimulus);
         }
     }
 
@@ -203,7 +268,7 @@ impl Instance {
 }
 
 impl Instance {
-    fn add_non_coherent_stimulation(&mut self, tick_input: &mut TickInput) {
+    fn add_stimulation(&mut self, tick_input: &mut TickInput) {
         if self.non_coherent_stimulation_rate > 0.0 {
             let num_stimulus_spikes_dist = Poisson::new(
                 self.non_coherent_stimulation_rate
@@ -218,6 +283,70 @@ impl Instance {
                     .choose_multiple(&mut self.rng, num_spikes)
                     .copied(),
             )
+        }
+
+        self.poll_stimulus_queues(tick_input);
+    }
+
+    fn poll_stimulus_queues(&mut self, tick_input: &mut TickInput) {
+        for in_channel_stimulus in self.in_channel_stimuli.iter_mut() {
+            while let Some(spike) = in_channel_stimulus.front() {
+                if spike.0 == self.inner.get_tick_period() {
+                    tick_input.spiking_in_channel_ids.push(spike.1);
+                } else {
+                    break;
+                }
+
+                in_channel_stimulus.pop_front();
+            }
+        }
+
+        self.in_channel_stimuli
+            .retain(|stimulus| !stimulus.is_empty());
+
+        for force_out_channel_stimulus in self.force_out_channel_stimuli.iter_mut() {
+            while let Some(spike) = force_out_channel_stimulus.front() {
+                if spike.0 == self.inner.get_tick_period() {
+                    tick_input.force_spiking_out_channel_ids.push(spike.1);
+                } else {
+                    break;
+                }
+
+                force_out_channel_stimulus.pop_front();
+            }
+        }
+
+        self.force_out_channel_stimuli
+            .retain(|stimulus| !stimulus.is_empty());
+
+        for force_neuron_stimulus in self.force_neuron_stimuli.iter_mut() {
+            while let Some(spike) = force_neuron_stimulus.front() {
+                if spike.0 == self.inner.get_tick_period() {
+                    tick_input.force_spiking_nids.push(spike.1);
+                } else {
+                    break;
+                }
+
+                force_neuron_stimulus.pop_front();
+            }
+        }
+
+        self.force_neuron_stimuli
+            .retain(|stimulus| !stimulus.is_empty());
+    }
+}
+
+#[pymethods]
+impl Stimulus {
+    #[new]
+    fn new() -> Self {
+        Self {
+            in_channel_spikes_ts: Vec::new(),
+            in_channel_spikes_ids: Vec::new(),
+            force_out_channel_spikes_ts: Vec::new(),
+            force_out_channel_spikes_ids: Vec::new(),
+            force_neuron_spikes_ts: Vec::new(),
+            force_neuron_spikes_ids: Vec::new(),
         }
     }
 }
@@ -246,6 +375,9 @@ fn create_from_deser_result<E: Error>(result: Result<InstanceParams, E>) -> PyRe
         non_coherent_stimulation_rate: 0.0,
         non_coherent_stimulation_nids,
         rng: StdRng::seed_from_u64(0),
+        in_channel_stimuli: Vec::new(),
+        force_out_channel_stimuli: Vec::new(),
+        force_neuron_stimuli: Vec::new(),
     })
 }
 
@@ -253,5 +385,62 @@ fn create_from_deser_result<E: Error>(result: Result<InstanceParams, E>) -> PyRe
 fn morphyne(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(create_from_yaml, m)?)?;
     m.add_function(wrap_pyfunction!(create_from_json, m)?)?;
+    m.add_class::<Stimulus>()?;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use morphine::{
+        instance::{self},
+        params::{InstanceParams, LayerParams},
+    };
+    use rand::{rngs::StdRng, SeedableRng};
+
+    use crate::{Instance, Stimulus};
+
+    #[test]
+    fn stimulus_queues_clean_up() {
+        let mut params = InstanceParams::default();
+        let mut layer_params = LayerParams::default();
+        layer_params.num_neurons = 1;
+        params.layers.push(layer_params);
+
+        let mut stimulus = Stimulus::new();
+        stimulus.in_channel_spikes_ts.push(1);
+        stimulus.in_channel_spikes_ids.push(0);
+        stimulus.force_out_channel_spikes_ts.push(1);
+        stimulus.force_out_channel_spikes_ids.push(0);
+        stimulus.force_neuron_spikes_ts.push(1);
+        stimulus.force_neuron_spikes_ids.push(0);
+
+        let mut instance = Instance {
+            inner: instance::create_instance(params).unwrap(),
+            reward_rate: 0.0,
+            non_coherent_stimulation_rate: 0.0,
+            non_coherent_stimulation_nids: Vec::new(),
+            rng: StdRng::seed_from_u64(0),
+            in_channel_stimuli: Vec::new(),
+            force_out_channel_stimuli: Vec::new(),
+            force_neuron_stimuli: Vec::new(),
+        };
+
+        instance.apply_stimulus(&stimulus);
+
+        assert_eq!(instance.in_channel_stimuli.len(), 1);
+        assert_eq!(instance.force_out_channel_stimuli.len(), 1);
+        assert_eq!(instance.force_neuron_stimuli.len(), 1);
+
+        instance.tick_until(1);
+
+        assert_eq!(instance.in_channel_stimuli.len(), 1);
+        assert_eq!(instance.force_out_channel_stimuli.len(), 1);
+        assert_eq!(instance.force_neuron_stimuli.len(), 1);
+
+        instance.tick_until(2);
+
+        assert!(instance.in_channel_stimuli.is_empty());
+        assert!(instance.force_out_channel_stimuli.is_empty());
+        assert!(instance.force_neuron_stimuli.is_empty());
+    }
 }
