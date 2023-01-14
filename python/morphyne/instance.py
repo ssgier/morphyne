@@ -47,6 +47,18 @@ def create_stimulus(in_channel_spikes: pd.DataFrame = None, force_out_channel_sp
     return stimulus
 
 
+def extract_in_channel_spikes(stimulus: Stimulus) -> pd.DataFrame:
+    return pd.DataFrame({"t": stimulus.in_channel_spikes_ts, "in_channel_id": stimulus.in_channel_spikes_ids})
+
+
+def extract_force_out_channel_spikes(stimulus: Stimulus) -> pd.DataFrame:
+    return pd.DataFrame({"t": stimulus.force_out_channel_spikes_ts, "out_channel_id": stimulus.force_out_channel_spikes_ids})
+
+
+def extract_force_neuron_spikes(stimulus: Stimulus) -> pd.DataFrame:
+    return pd.DataFrame({"t": stimulus.force_neuron_spikes_ts, "nid": stimulus.force_neuron_spikes_ids})
+
+
 class Instance:
 
     def __init__(self, inner) -> None:
@@ -87,21 +99,13 @@ class Instance:
             state_snapshot = StateSnapshot(
                 membrane_voltages, df_synapse_states)
 
-        if prepend_to_result is not None:
-            df_out_channel_spikes = pd.concat(
-                [prepend_to_result.out_channel_spikes, df_out_channel_spikes])
-            df_out_channel_spikes.reset_index(inplace=True, drop=True)
+        if prepend_to_result:
+            return concat_results(prepend_to_result, df_out_channel_spikes, df_neuron_spikes, state_snapshot, inner_result.synaptic_transmission_count)
+        else:
+            return TickResult(df_out_channel_spikes, df_neuron_spikes,
+                              state_snapshot, inner_result.synaptic_transmission_count)
 
-            df_neuron_spikes = pd.concat(
-                [prepend_to_result.neuron_spikes, df_neuron_spikes])
-            df_neuron_spikes.reset_index(inplace=True, drop=True)
-
-        tick_result = TickResult(df_out_channel_spikes, df_neuron_spikes,
-                                 state_snapshot, inner_result.synaptic_transmission_count)
-
-        return tick_result
-
-    def tick_until(self, t: int, ignore_output=False) -> TickResult:
+    def tick_until(self, t: int, ignore_output=False, prepend_to_result: pd.DataFrame = None) -> TickResult:
         if ignore_output:
             self._inner.tick_until(t)
             return None
@@ -111,7 +115,14 @@ class Instance:
                                        "out_channel_id": inner_result.out_channel_spikes_ids}
             neuron_spikes_data = {
                 "t": inner_result.neuron_spikes_ts, "nid": inner_result.neuron_spikes_ids}
-            return TickResult(pd.DataFrame(out_channel_spikes_data), pd.DataFrame(neuron_spikes_data), None, inner_result.synaptic_transmission_count)
+
+            df_out_channel_spikes = pd.DataFrame(out_channel_spikes_data)
+            df_neuron_spikes = pd.DataFrame(neuron_spikes_data)
+
+            if prepend_to_result:
+                return concat_results(prepend_to_result, df_out_channel_spikes, df_neuron_spikes, None, inner_result.synaptic_transmission_count)
+            else:
+                return TickResult(df_out_channel_spikes, df_neuron_spikes, None, inner_result.synaptic_transmission_count)
 
     def set_reward_rate(self, reward_rate):
         self._inner.reward_rate = reward_rate
@@ -121,3 +132,16 @@ class Instance:
 
     def get_t(self) -> int:
         return self._inner.get_t()
+
+
+def concat_results(result: TickResult, df_out_channel_spikes: pd.DataFrame, df_neuron_spikes: pd.DataFrame, state_snapshot, syn_transmission_count) -> TickResult:
+    df_out_channel_spikes = pd.concat(
+        [result.out_channel_spikes, df_out_channel_spikes])
+    df_out_channel_spikes.reset_index(inplace=True, drop=True)
+
+    df_neuron_spikes = pd.concat(
+        [result.neuron_spikes, df_neuron_spikes])
+    df_neuron_spikes.reset_index(inplace=True, drop=True)
+
+    return TickResult(df_out_channel_spikes, df_neuron_spikes,
+                      state_snapshot, syn_transmission_count)

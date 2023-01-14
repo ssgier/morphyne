@@ -30,22 +30,22 @@ struct Instance {
 #[pyclass]
 #[derive(Debug)]
 struct Stimulus {
-    #[pyo3(set)]
+    #[pyo3(get, set)]
     in_channel_spikes_ts: Vec<usize>,
 
-    #[pyo3(set)]
+    #[pyo3(get, set)]
     in_channel_spikes_ids: Vec<usize>,
 
-    #[pyo3(set)]
+    #[pyo3(get, set)]
     force_out_channel_spikes_ts: Vec<usize>,
 
-    #[pyo3(set)]
+    #[pyo3(get, set)]
     force_out_channel_spikes_ids: Vec<usize>,
 
-    #[pyo3(set)]
+    #[pyo3(get, set)]
     force_neuron_spikes_ts: Vec<usize>,
 
-    #[pyo3(set)]
+    #[pyo3(get, set)]
     force_neuron_spikes_ids: Vec<usize>,
 }
 
