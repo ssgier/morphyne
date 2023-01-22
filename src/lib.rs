@@ -8,6 +8,17 @@ use serde::de::Error;
 use statrs::distribution::Poisson;
 use std::{collections::VecDeque, iter};
 
+struct SpikeInfo {
+    t: usize,
+    id: usize,
+}
+
+impl SpikeInfo {
+    fn new(t: usize, id: usize) -> Self {
+        Self { t, id }
+    }
+}
+
 #[pyclass]
 struct Instance {
     inner: instance::Instance,
@@ -20,11 +31,11 @@ struct Instance {
     #[pyo3(get, set)]
     non_coherent_stimulation_rate: f64,
 
-    in_channel_stimuli: Vec<VecDeque<(usize, usize)>>,
+    in_channel_stimuli: Vec<VecDeque<SpikeInfo>>,
 
-    force_out_channel_stimuli: Vec<VecDeque<(usize, usize)>>,
+    force_out_channel_stimuli: Vec<VecDeque<SpikeInfo>>,
 
-    force_neuron_stimuli: Vec<VecDeque<(usize, usize)>>,
+    force_neuron_stimuli: Vec<VecDeque<SpikeInfo>>,
 }
 
 #[pyclass]
@@ -232,7 +243,8 @@ impl Instance {
                 .in_channel_spikes_ts
                 .iter()
                 .map(|t| t + self.get_t())
-                .zip(stimulus.in_channel_spikes_ids.iter().copied())
+                .zip(stimulus.in_channel_spikes_ids.iter())
+                .map(|(t, id)| SpikeInfo::new(t, *id))
                 .collect();
 
             self.in_channel_stimuli.push(in_channel_stimulus);
@@ -243,7 +255,8 @@ impl Instance {
                 .force_out_channel_spikes_ts
                 .iter()
                 .map(|t| t + self.get_t())
-                .zip(stimulus.force_out_channel_spikes_ids.iter().copied())
+                .zip(stimulus.force_out_channel_spikes_ids.iter())
+                .map(|(t, id)| SpikeInfo::new(t, *id))
                 .collect();
 
             self.force_out_channel_stimuli
@@ -255,7 +268,8 @@ impl Instance {
                 .force_neuron_spikes_ts
                 .iter()
                 .map(|t| t + self.get_t())
-                .zip(stimulus.force_neuron_spikes_ids.iter().copied())
+                .zip(stimulus.force_neuron_spikes_ids.iter())
+                .map(|(t, id)| SpikeInfo::new(t, *id))
                 .collect();
 
             self.force_neuron_stimuli.push(force_neuron_stimulus);
@@ -291,8 +305,8 @@ impl Instance {
     fn poll_stimulus_queues(&mut self, tick_input: &mut TickInput) {
         for in_channel_stimulus in self.in_channel_stimuli.iter_mut() {
             while let Some(spike) = in_channel_stimulus.front() {
-                if spike.0 == self.inner.get_tick_period() {
-                    tick_input.spiking_in_channel_ids.push(spike.1);
+                if spike.t == self.inner.get_tick_period() {
+                    tick_input.spiking_in_channel_ids.push(spike.id);
                 } else {
                     break;
                 }
@@ -306,8 +320,8 @@ impl Instance {
 
         for force_out_channel_stimulus in self.force_out_channel_stimuli.iter_mut() {
             while let Some(spike) = force_out_channel_stimulus.front() {
-                if spike.0 == self.inner.get_tick_period() {
-                    tick_input.force_spiking_out_channel_ids.push(spike.1);
+                if spike.t == self.inner.get_tick_period() {
+                    tick_input.force_spiking_out_channel_ids.push(spike.id);
                 } else {
                     break;
                 }
@@ -321,8 +335,8 @@ impl Instance {
 
         for force_neuron_stimulus in self.force_neuron_stimuli.iter_mut() {
             while let Some(spike) = force_neuron_stimulus.front() {
-                if spike.0 == self.inner.get_tick_period() {
-                    tick_input.force_spiking_nids.push(spike.1);
+                if spike.t == self.inner.get_tick_period() {
+                    tick_input.force_spiking_nids.push(spike.id);
                 } else {
                     break;
                 }
@@ -352,16 +366,19 @@ impl Stimulus {
 }
 
 #[pyfunction]
-fn create_from_yaml(yaml_str: &str) -> PyResult<Instance> {
-    create_from_deser_result(serde_yaml::from_str(yaml_str))
+fn create_from_yaml(yaml_str: &str, seed: u64) -> PyResult<Instance> {
+    create_from_deser_result(serde_yaml::from_str(yaml_str), seed)
 }
 
 #[pyfunction]
-fn create_from_json(json_str: &str) -> PyResult<Instance> {
-    create_from_deser_result(serde_json::from_str(json_str))
+fn create_from_json(json_str: &str, seed: u64) -> PyResult<Instance> {
+    create_from_deser_result(serde_json::from_str(json_str), seed)
 }
 
-fn create_from_deser_result<E: Error>(result: Result<InstanceParams, E>) -> PyResult<Instance> {
+fn create_from_deser_result<E: Error>(
+    result: Result<InstanceParams, E>,
+    seed: u64,
+) -> PyResult<Instance> {
     let params = result.map_err(|error| PyValueError::new_err(error.to_string()))?;
 
     let instance = instance::create_instance(params)
@@ -374,7 +391,7 @@ fn create_from_deser_result<E: Error>(result: Result<InstanceParams, E>) -> PyRe
         reward_rate: 0.0,
         non_coherent_stimulation_rate: 0.0,
         non_coherent_stimulation_nids,
-        rng: StdRng::seed_from_u64(0),
+        rng: StdRng::seed_from_u64(seed),
         in_channel_stimuli: Vec::new(),
         force_out_channel_stimuli: Vec::new(),
         force_neuron_stimuli: Vec::new(),
@@ -402,8 +419,7 @@ mod tests {
     #[test]
     fn stimulus_queues_clean_up() {
         let mut params = InstanceParams::default();
-        let mut layer_params = LayerParams::default();
-        layer_params.num_neurons = 1;
+        let layer_params = LayerParams::default();
         params.layers.push(layer_params);
 
         let mut stimulus = Stimulus::new();

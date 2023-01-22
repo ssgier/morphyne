@@ -29,10 +29,10 @@ class IntegrationTests(unittest.TestCase):
                 instance.apply_stimulus(stimulus)
                 expected_neuron_spikes.append(
                     get_expected_neuron_spikes(stimulus, instance.get_t()))
-                result = instance.tick(prepend_to_result=result)
+                result = instance.tick(append_to=result)
 
             result = instance.tick_until(
-                instance.get_t() + 20, prepend_to_result=result)
+                instance.get_t() + 20, append_to=result)
 
             expected_neuron_spikes = pd.concat(expected_neuron_spikes)
             expected_neuron_spikes.sort_values(by=["t", "nid"], inplace=True)
@@ -51,7 +51,7 @@ class IntegrationTests(unittest.TestCase):
         result = None
 
         while instance.get_t() < 110:
-            result = instance.tick(prepend_to_result=result)
+            result = instance.tick(append_to=result)
         self.check_result(result)
 
     def test_stimulus_specific_batch(self):

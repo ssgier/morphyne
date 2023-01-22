@@ -3,33 +3,42 @@ import pandas as pd
 from .morphyne import Stimulus
 from .morphyne import create_from_yaml as create_from_yaml_inner
 from .morphyne import create_from_json as create_from_json_inner
+import json
 
 
 class StateSnapshot:
 
-    def __init__(self, membrane_voltages: np.array, synapse_states: pd.DataFrame) -> None:
+    def __init__(self, membrane_voltages: np.ndarray, synapse_states: pd.DataFrame) -> None:
         self.membrane_voltages = membrane_voltages
         self.synapse_states = synapse_states
 
 
 class TickResult:
 
-    def __init__(self, out_channel_spikes: pd.DataFrame, neuron_spikes: pd.DataFrame, state_snapshot: StateSnapshot, synaptic_transmission_count: int) -> None:
+    def __init__(self, out_channel_spikes: pd.DataFrame, neuron_spikes: pd.DataFrame, state_snapshot: StateSnapshot | None, synaptic_transmission_count: int) -> None:
         self.out_channel_spikes = out_channel_spikes
         self.neuron_spikes = neuron_spikes
         self.state_snapshot = state_snapshot
         self.synaptic_transmission_count = synaptic_transmission_count
 
 
-def create_from_yaml(params_yaml: str):
-    return Instance(create_from_yaml_inner(params_yaml))
+def create_from_yaml(params_yaml: str, seed: int):
+    if seed is None:
+        seed = 0
+    return Instance(create_from_yaml_inner(params_yaml, seed))
 
 
-def create_from_json(params_json: str):
-    return Instance(create_from_json_inner(params_json))
+def create_from_json(params_json: str, seed=None):
+    if seed is None:
+        seed = 0
+    return Instance(create_from_json_inner(params_json, seed))
 
 
-def create_stimulus(in_channel_spikes: pd.DataFrame = None, force_out_channel_spikes: pd.DataFrame = None, force_neuron_spikes: pd.DataFrame = None) -> Stimulus:
+def create(params: dict, seed=None):
+    return create_from_json(json.dumps(params), seed)
+
+
+def create_stimulus(in_channel_spikes: pd.DataFrame | None = None, force_out_channel_spikes: pd.DataFrame | None = None, force_neuron_spikes: pd.DataFrame | None = None) -> Stimulus:
     stimulus = Stimulus()
 
     if in_channel_spikes is not None:
@@ -67,7 +76,7 @@ class Instance:
     def apply_stimulus(self, stimulus: Stimulus):
         self._inner.apply_stimulus(stimulus)
 
-    def tick(self, spiking_in_channel_ids=[], force_spiking_out_channel_ids=[], force_spiking_nids=[], reward=None, extract_state_snapshot=False, prepend_to_result: pd.DataFrame = None) -> TickResult:
+    def tick(self, spiking_in_channel_ids=[], force_spiking_out_channel_ids=[], force_spiking_nids=[], reward=None, extract_state_snapshot=False, append_to: TickResult | None = None) -> TickResult:
 
         if reward is None:
             reward = self._inner.reward_rate
@@ -99,13 +108,13 @@ class Instance:
             state_snapshot = StateSnapshot(
                 membrane_voltages, df_synapse_states)
 
-        if prepend_to_result:
-            return concat_results(prepend_to_result, df_out_channel_spikes, df_neuron_spikes, state_snapshot, inner_result.synaptic_transmission_count)
+        if append_to:
+            return concat_results(append_to, df_out_channel_spikes, df_neuron_spikes, state_snapshot, inner_result.synaptic_transmission_count)
         else:
             return TickResult(df_out_channel_spikes, df_neuron_spikes,
                               state_snapshot, inner_result.synaptic_transmission_count)
 
-    def tick_until(self, t: int, ignore_output=False, prepend_to_result: pd.DataFrame = None) -> TickResult:
+    def tick_until(self, t: int, ignore_output=False, append_to: TickResult | None = None) -> TickResult | None:
         if ignore_output:
             self._inner.tick_until(t)
             return None
@@ -116,11 +125,12 @@ class Instance:
             neuron_spikes_data = {
                 "t": inner_result.neuron_spikes_ts, "nid": inner_result.neuron_spikes_ids}
 
-            df_out_channel_spikes = pd.DataFrame(out_channel_spikes_data)
-            df_neuron_spikes = pd.DataFrame(neuron_spikes_data)
+            df_out_channel_spikes = pd.DataFrame(
+                out_channel_spikes_data, dtype=np.int64)
+            df_neuron_spikes = pd.DataFrame(neuron_spikes_data, dtype=np.int64)
 
-            if prepend_to_result:
-                return concat_results(prepend_to_result, df_out_channel_spikes, df_neuron_spikes, None, inner_result.synaptic_transmission_count)
+            if append_to:
+                return concat_results(append_to, df_out_channel_spikes, df_neuron_spikes, None, inner_result.synaptic_transmission_count)
             else:
                 return TickResult(df_out_channel_spikes, df_neuron_spikes, None, inner_result.synaptic_transmission_count)
 

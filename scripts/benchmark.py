@@ -2,7 +2,7 @@ import morphyne as mp
 import time
 import params_template
 
-instance = mp.create_from_yaml(params_template.params_yaml)
+instance = mp.create_from_yaml(params_template.params_yaml, 0)
 instance.set_non_coherent_stimulation_rate(5 / 800)
 
 synaptic_transmission_count = 0

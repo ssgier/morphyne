@@ -5,7 +5,7 @@ import unittest
 
 class ChecksumTest(unittest.TestCase):
     def test_vs_inner(self):
-        instance = mp.create_from_yaml(params_template.params_yaml)
+        instance = mp.create_from_yaml(params_template.params_yaml, seed=0)
         instance.set_non_coherent_stimulation_rate(0.01)
         instance.set_reward_rate(0.002)
         t_stop = 1000
@@ -25,7 +25,7 @@ class ChecksumTest(unittest.TestCase):
         self.check_single_tick_result(tick_result)
 
     def test_ignore_output(self):
-        instance = mp.create_from_yaml(params_template.params_yaml)
+        instance = mp.create_from_yaml(params_template.params_yaml, seed=0)
         instance.set_non_coherent_stimulation_rate(0.01)
         instance.set_reward_rate(0.002)
         t_stop = 1000
