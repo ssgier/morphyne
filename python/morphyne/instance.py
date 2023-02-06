@@ -76,13 +76,14 @@ class Instance:
     def apply_stimulus(self, stimulus: Stimulus):
         self._inner.apply_stimulus(stimulus)
 
-    def tick(self, spiking_in_channel_ids=[], force_spiking_out_channel_ids=[], force_spiking_nids=[], reward=None, extract_state_snapshot=False, append_to: TickResult | None = None) -> TickResult:
+    def tick(self, spiking_in_channel_ids=[], force_spiking_out_channel_ids=[], force_spiking_nids=[], reward=None,
+             extract_state_snapshot=False, reset_ephemeral_state: bool = False, append_to: TickResult | None = None) -> TickResult:
 
         if reward is None:
             reward = self._inner.reward_rate
 
         inner_result = self._inner.tick(
-            spiking_in_channel_ids, force_spiking_out_channel_ids, force_spiking_nids, reward, extract_state_snapshot)
+            spiking_in_channel_ids, force_spiking_out_channel_ids, force_spiking_nids, reward, extract_state_snapshot, reset_ephemeral_state)
 
         spiking_out_channel_ids = np.array(
             inner_result.spiking_out_channel_ids)

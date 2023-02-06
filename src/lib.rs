@@ -124,6 +124,7 @@ impl Instance {
         force_spiking_nids: Vec<usize>,
         reward: f32,
         extract_state_snapshot: bool,
+        reset_ephemeral_state: bool,
     ) -> PyResult<TickResult> {
         let mut tick_input = TickInput {
             spiking_in_channel_ids,
@@ -131,6 +132,7 @@ impl Instance {
             force_spiking_nids,
             reward,
             extract_state_snapshot,
+            reset_ephemeral_state,
         };
 
         self.add_stimulation(&mut tick_input);
