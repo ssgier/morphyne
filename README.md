@@ -1,5 +1,5 @@
 # morphyne
-An accelerated spiking neural network simulator for neurmorphic computing and research in Python. Suitable for large-scale simulations. Achieves up to 100 million synaptic transmissions (including STP and R-STDP) per second on a desktop computer. Its [core engine](https://github.com/ssgier/morphine) is event-driven, parallel and written in Rust.
+An accelerated event-driven spiking neural network simulator for neurmorphic computing and research in Python. Suitable for large-scale simulations. Achieves up to 100 million synaptic transmissions (including STP and R-STDP) per second on a desktop computer. Its [core engine](https://github.com/ssgier/morphine) is event-driven, parallel and written in Rust.
 
 ## Features
 * LIF (leaky integrate-and-fire) neurons with optionally adaptive threshold
