@@ -8,11 +8,12 @@ An accelerated event-driven spiking neural network simulator for neurmorphic com
 * Reward-modulated spike-timing-dependent plasticity (R-STDP) with a short term (decaying) and long term variant
 * Parametrization options: JSON, YAML, Python Dictionary
 * Pandas-based user interface
+* Linux is currently the only supported OS
 
 ## Project State
 Complete in functionality but lacks user documentation. I am currently using it for my own research and experiments. I plan to write documentation at some point, perhaps in form of a Jupyter notebook. If you are interested in trying this tool out, please message me on LinkedIn or create an issue.
 
-## Basic Demo
+## Basic Demo (Linux Only)
 Install it:
 ```
 pip install morphyne
