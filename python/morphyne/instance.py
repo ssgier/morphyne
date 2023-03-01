@@ -1,3 +1,4 @@
+from typing import Optional
 import numpy as np
 import pandas as pd
 from .morphyne import Stimulus
@@ -135,6 +136,9 @@ class Instance:
             else:
                 return TickResult(df_out_channel_spikes, df_neuron_spikes, None, inner_result.synaptic_transmission_count)
 
+    def tick_for(self, t: int, ignore_output=False, append_to: Optional[TickResult] = None) -> Optional[TickResult]:
+        return self.tick_until(self.get_t() + t, ignore_output=ignore_output, append_to=append_to)
+
     def set_reward_rate(self, reward_rate):
         self._inner.reward_rate = reward_rate
 
@@ -143,6 +147,9 @@ class Instance:
 
     def get_t(self) -> int:
         return self._inner.get_t()
+
+    def get_num_neurons(self) -> int:
+        return self._inner.get_num_neurons()
 
 
 def concat_results(result: TickResult, df_out_channel_spikes: pd.DataFrame, df_neuron_spikes: pd.DataFrame, state_snapshot, syn_transmission_count) -> TickResult:

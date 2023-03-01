@@ -281,6 +281,10 @@ impl Instance {
     fn get_t(&self) -> usize {
         self.inner.get_tick_period()
     }
+
+    fn get_num_neurons(&self) -> usize {
+        self.inner.get_num_neurons()
+    }
 }
 
 impl Instance {
