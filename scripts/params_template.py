@@ -120,5 +120,4 @@ layer_connections:
 technical_params:
   num_threads: 1
   pin_threads: false
-  batched_ring_buffer_size: 21
 """
