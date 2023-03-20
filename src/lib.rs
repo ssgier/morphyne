@@ -103,6 +103,9 @@ struct StateSnapshot {
     membrane_voltages: Vec<f32>,
 
     #[pyo3(get)]
+    projection_ids: Vec<usize>,
+
+    #[pyo3(get)]
     pre_syn_nids: Vec<usize>,
 
     #[pyo3(get)]
@@ -150,6 +153,11 @@ impl Instance {
                 .into_iter()
                 .map(|neuron_state| neuron_state.voltage)
                 .collect();
+            let projection_ids = inner_snapshot
+                .synapse_states
+                .iter()
+                .map(|syn_state| syn_state.projection_id)
+                .collect();
             let pre_syn_nids = inner_snapshot
                 .synapse_states
                 .iter()
@@ -173,6 +181,7 @@ impl Instance {
 
             Some(StateSnapshot {
                 membrane_voltages,
+                projection_ids,
                 pre_syn_nids,
                 post_syn_nids,
                 conduction_delays,

@@ -102,7 +102,8 @@ class Instance:
         if extract_state_snapshot:
             membrane_voltages = np.array(
                 inner_result.state_snapshot.membrane_voltages)
-            synapse_state_data = {"pre_syn_nid": inner_result.state_snapshot.pre_syn_nids,
+            synapse_state_data = {"projection_id": inner_result.state_snapshot.projection_ids,
+                                  "pre_syn_nid": inner_result.state_snapshot.pre_syn_nids,
                                   "post_syn_nid": inner_result.state_snapshot.post_syn_nids,
                                   "conduction_delay": inner_result.state_snapshot.conduction_delays,
                                   "weight": inner_result.state_snapshot.weights}
