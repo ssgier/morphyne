@@ -73,9 +73,6 @@ struct TickResult {
 
     #[pyo3(get)]
     synaptic_transmission_count: usize,
-
-    #[pyo3(get)]
-    state_snapshot: Option<StateSnapshot>,
 }
 
 #[pyclass]
@@ -126,16 +123,12 @@ impl Instance {
         force_spiking_out_channel_ids: Vec<usize>,
         force_spiking_nids: Vec<usize>,
         reward: f32,
-        extract_state_snapshot: bool,
-        reset_ephemeral_state: bool,
     ) -> PyResult<TickResult> {
         let mut tick_input = TickInput {
             spiking_in_channel_ids,
             force_spiking_out_channel_ids,
             force_spiking_nids,
             reward,
-            extract_state_snapshot,
-            reset_ephemeral_state,
         };
 
         self.add_stimulation(&mut tick_input);
@@ -145,58 +138,11 @@ impl Instance {
             .tick(&tick_input)
             .map_err(|error| PyValueError::new_err(error.to_string()))?;
 
-        let state_snapshot = if extract_state_snapshot {
-            let inner_snapshot = inner_result.state_snapshot.unwrap();
-
-            let membrane_voltages = inner_snapshot
-                .neuron_states
-                .into_iter()
-                .map(|neuron_state| neuron_state.voltage)
-                .collect();
-            let projection_ids = inner_snapshot
-                .synapse_states
-                .iter()
-                .map(|syn_state| syn_state.projection_id)
-                .collect();
-            let pre_syn_nids = inner_snapshot
-                .synapse_states
-                .iter()
-                .map(|syn_state| syn_state.pre_syn_nid)
-                .collect();
-            let post_syn_nids = inner_snapshot
-                .synapse_states
-                .iter()
-                .map(|syn_state| syn_state.post_syn_nid)
-                .collect();
-            let conduction_delays = inner_snapshot
-                .synapse_states
-                .iter()
-                .map(|syn_state| syn_state.conduction_delay)
-                .collect();
-            let weights = inner_snapshot
-                .synapse_states
-                .iter()
-                .map(|syn_state| syn_state.weight)
-                .collect();
-
-            Some(StateSnapshot {
-                membrane_voltages,
-                projection_ids,
-                pre_syn_nids,
-                post_syn_nids,
-                conduction_delays,
-                weights,
-            })
-        } else {
-            None
-        };
-
         Ok(TickResult {
             t: inner_result.t,
             spiking_nids: inner_result.spiking_nids,
             spiking_out_channel_ids: inner_result.spiking_out_channel_ids,
             synaptic_transmission_count: inner_result.synaptic_transmission_count,
-            state_snapshot,
         })
     }
 
@@ -246,6 +192,54 @@ impl Instance {
             self.add_stimulation(&mut tick_input);
             self.inner.tick(&tick_input).unwrap();
         }
+    }
+
+    fn extract_state_snapshot(&mut self) -> StateSnapshot {
+        let inner_snapshot = self.inner.extract_state_snapshot();
+
+        let membrane_voltages = inner_snapshot
+            .neuron_states
+            .into_iter()
+            .map(|neuron_state| neuron_state.voltage)
+            .collect();
+        let projection_ids = inner_snapshot
+            .synapse_states
+            .iter()
+            .map(|syn_state| syn_state.projection_id)
+            .collect();
+        let pre_syn_nids = inner_snapshot
+            .synapse_states
+            .iter()
+            .map(|syn_state| syn_state.pre_syn_nid)
+            .collect();
+        let post_syn_nids = inner_snapshot
+            .synapse_states
+            .iter()
+            .map(|syn_state| syn_state.post_syn_nid)
+            .collect();
+        let conduction_delays = inner_snapshot
+            .synapse_states
+            .iter()
+            .map(|syn_state| syn_state.conduction_delay)
+            .collect();
+        let weights = inner_snapshot
+            .synapse_states
+            .iter()
+            .map(|syn_state| syn_state.weight)
+            .collect();
+
+        StateSnapshot {
+            membrane_voltages,
+            projection_ids,
+            pre_syn_nids,
+            post_syn_nids,
+            conduction_delays,
+            weights,
+        }
+    }
+
+    fn reset_ephemeral_state(&mut self) {
+        self.inner.reset_ephemeral_state();
     }
 
     fn apply_stimulus(&mut self, stimulus: &Stimulus) {
@@ -320,7 +314,7 @@ impl Instance {
     fn poll_stimulus_queues(&mut self, tick_input: &mut TickInput) {
         for in_channel_stimulus in self.in_channel_stimuli.iter_mut() {
             while let Some(spike) = in_channel_stimulus.front() {
-                if spike.t == self.inner.get_tick_period() {
+                if spike.t == self.inner.get_tick_period() + 1 {
                     tick_input.spiking_in_channel_ids.push(spike.id);
                 } else {
                     break;
@@ -335,7 +329,7 @@ impl Instance {
 
         for force_out_channel_stimulus in self.force_out_channel_stimuli.iter_mut() {
             while let Some(spike) = force_out_channel_stimulus.front() {
-                if spike.t == self.inner.get_tick_period() {
+                if spike.t == self.inner.get_tick_period() + 1 {
                     tick_input.force_spiking_out_channel_ids.push(spike.id);
                 } else {
                     break;
@@ -350,7 +344,7 @@ impl Instance {
 
         for force_neuron_stimulus in self.force_neuron_stimuli.iter_mut() {
             while let Some(spike) = force_neuron_stimulus.front() {
-                if spike.t == self.inner.get_tick_period() {
+                if spike.t == self.inner.get_tick_period() + 1 {
                     tick_input.force_spiking_nids.push(spike.id);
                 } else {
                     break;

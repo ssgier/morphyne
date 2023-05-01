@@ -116,7 +116,7 @@ def generate_random_stimulus() -> mp.Stimulus:
 
 def generate_random_spike_train(t: int, num_ids: int, max_size: int, id_col_name: str) -> pd.DataFrame:
     size = random.randint(1, max_size)
-    ts = np.random.randint(t, size=size)
+    ts = np.random.randint(1, t, size=size)
     ids = np.random.randint(num_ids, size=size)
     data = {"t": ts, id_col_name: ids}
     df = pd.DataFrame(data)
