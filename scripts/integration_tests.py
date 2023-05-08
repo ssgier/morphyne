@@ -59,6 +59,22 @@ class IntegrationTests(unittest.TestCase):
         result = instance.tick_until(110)
         self.check_result(result)
 
+    def test_unsorted_spikes(self):
+        instance = create_instance()
+
+        bad_stimuli = [
+            mp.create_stimulus(in_channel_spikes=pd.DataFrame(
+                {"t": [2, 1], "in_channel_id": [0, 0]})),
+            mp.create_stimulus(force_out_channel_spikes=pd.DataFrame(
+                {"t": [2, 1], "out_channel_id": [0, 0]})),
+            mp.create_stimulus(force_neuron_spikes=pd.DataFrame(
+                {"t": [2, 1], "nid": [0, 0]})),
+        ]
+
+        for bad_stimulus in bad_stimuli:
+            with self.assertRaises(ValueError):
+                instance.apply_stimulus(bad_stimulus)
+
     def check_result(self, result: pd.DataFrame):
         expected_out_channel_spikes = pd.DataFrame(
             {"t": [103, 104, 104, 108], "out_channel_id": [0, 2, 2, 1]})

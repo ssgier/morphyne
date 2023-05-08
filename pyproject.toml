@@ -10,6 +10,11 @@ classifiers = [
     "Programming Language :: Python :: Implementation :: CPython",
     "Programming Language :: Python :: Implementation :: PyPy",
 ]
+dependencies = [
+    "numpy ~= 1.24.3",
+    "pandas ~= 2.0.1"
+]
 
 [tool.maturin]
 python-source = "python"
+

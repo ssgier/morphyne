@@ -1,3 +1,4 @@
+use is_sorted::IsSorted;
 use morphine::{
     instance::{self, TickInput},
     params::InstanceParams,
@@ -242,43 +243,28 @@ impl Instance {
         self.inner.reset_ephemeral_state();
     }
 
-    fn apply_stimulus(&mut self, stimulus: &Stimulus) {
-        if !stimulus.in_channel_spikes_ts.is_empty() {
-            let in_channel_stimulus: VecDeque<_> = stimulus
-                .in_channel_spikes_ts
-                .iter()
-                .map(|t| t + self.get_t())
-                .zip(stimulus.in_channel_spikes_ids.iter())
-                .map(|(t, id)| SpikeInfo::new(t, *id))
-                .collect();
+    fn apply_stimulus(&mut self, stimulus: &Stimulus) -> PyResult<()> {
+        let tick_period = self.get_t();
+        apply_stimulus_constituent(
+            &stimulus.in_channel_spikes_ts,
+            &stimulus.in_channel_spikes_ids,
+            &mut self.in_channel_stimuli,
+            tick_period,
+        )?;
+        apply_stimulus_constituent(
+            &stimulus.force_out_channel_spikes_ts,
+            &stimulus.force_out_channel_spikes_ids,
+            &mut self.force_out_channel_stimuli,
+            tick_period,
+        )?;
+        apply_stimulus_constituent(
+            &stimulus.force_neuron_spikes_ts,
+            &stimulus.force_neuron_spikes_ids,
+            &mut self.force_neuron_stimuli,
+            tick_period,
+        )?;
 
-            self.in_channel_stimuli.push(in_channel_stimulus);
-        }
-
-        if !stimulus.force_out_channel_spikes_ts.is_empty() {
-            let force_out_channel_stimulus: VecDeque<_> = stimulus
-                .force_out_channel_spikes_ts
-                .iter()
-                .map(|t| t + self.get_t())
-                .zip(stimulus.force_out_channel_spikes_ids.iter())
-                .map(|(t, id)| SpikeInfo::new(t, *id))
-                .collect();
-
-            self.force_out_channel_stimuli
-                .push(force_out_channel_stimulus);
-        }
-
-        if !stimulus.force_neuron_spikes_ts.is_empty() {
-            let force_neuron_stimulus: VecDeque<_> = stimulus
-                .force_neuron_spikes_ts
-                .iter()
-                .map(|t| t + self.get_t())
-                .zip(stimulus.force_neuron_spikes_ids.iter())
-                .map(|(t, id)| SpikeInfo::new(t, *id))
-                .collect();
-
-            self.force_neuron_stimuli.push(force_neuron_stimulus);
-        }
+        Ok(())
     }
 
     fn get_t(&self) -> usize {
@@ -312,51 +298,70 @@ impl Instance {
     }
 
     fn poll_stimulus_queues(&mut self, tick_input: &mut TickInput) {
-        for in_channel_stimulus in self.in_channel_stimuli.iter_mut() {
-            while let Some(spike) = in_channel_stimulus.front() {
-                if spike.t == self.inner.get_tick_period() + 1 {
-                    tick_input.spiking_in_channel_ids.push(spike.id);
-                } else {
-                    break;
-                }
+        let tick_period = self.get_t();
 
-                in_channel_stimulus.pop_front();
-            }
-        }
+        poll_stimulus_queue_group(
+            &mut self.in_channel_stimuli,
+            &mut tick_input.spiking_in_channel_ids,
+            tick_period,
+        );
 
-        self.in_channel_stimuli
-            .retain(|stimulus| !stimulus.is_empty());
+        poll_stimulus_queue_group(
+            &mut self.force_out_channel_stimuli,
+            &mut tick_input.force_spiking_out_channel_ids,
+            tick_period,
+        );
 
-        for force_out_channel_stimulus in self.force_out_channel_stimuli.iter_mut() {
-            while let Some(spike) = force_out_channel_stimulus.front() {
-                if spike.t == self.inner.get_tick_period() + 1 {
-                    tick_input.force_spiking_out_channel_ids.push(spike.id);
-                } else {
-                    break;
-                }
-
-                force_out_channel_stimulus.pop_front();
-            }
-        }
-
-        self.force_out_channel_stimuli
-            .retain(|stimulus| !stimulus.is_empty());
-
-        for force_neuron_stimulus in self.force_neuron_stimuli.iter_mut() {
-            while let Some(spike) = force_neuron_stimulus.front() {
-                if spike.t == self.inner.get_tick_period() + 1 {
-                    tick_input.force_spiking_nids.push(spike.id);
-                } else {
-                    break;
-                }
-
-                force_neuron_stimulus.pop_front();
-            }
-        }
-
-        self.force_neuron_stimuli
-            .retain(|stimulus| !stimulus.is_empty());
+        poll_stimulus_queue_group(
+            &mut self.force_neuron_stimuli,
+            &mut tick_input.force_spiking_nids,
+            tick_period,
+        );
     }
+}
+
+fn apply_stimulus_constituent(
+    source_ts: &[usize],
+    source_ids: &[usize],
+    target: &mut Vec<VecDeque<SpikeInfo>>,
+    tick_period: usize,
+) -> PyResult<()> {
+    if !source_ts.is_empty() {
+        if !IsSorted::is_sorted(&mut source_ts.iter()) {
+            return Err(PyValueError::new_err(
+                "Invalid stimulus: spikes must be sorted with respect to t",
+            ));
+        }
+        let in_channel_stimulus: VecDeque<_> = source_ts
+            .iter()
+            .map(|t| t + tick_period)
+            .zip(source_ids.iter())
+            .map(|(t, id)| SpikeInfo::new(t, *id))
+            .collect();
+
+        target.push(in_channel_stimulus);
+    }
+    Ok(())
+}
+
+fn poll_stimulus_queue_group(
+    queues: &mut Vec<VecDeque<SpikeInfo>>,
+    target: &mut Vec<usize>,
+    tick_period: usize,
+) {
+    for stimulus in queues.iter_mut() {
+        while let Some(spike) = stimulus.front() {
+            if spike.t == tick_period + 1 {
+                target.push(spike.id);
+            } else {
+                break;
+            }
+
+            stimulus.pop_front();
+        }
+    }
+
+    queues.retain(|stimulus| !stimulus.is_empty());
 }
 
 #[pymethods]

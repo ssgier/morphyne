@@ -104,28 +104,24 @@ class Instance:
             return TickResult(df_out_channel_spikes, df_neuron_spikes,
                               inner_result.synaptic_transmission_count)
 
-    def tick_until(self, t: int, ignore_output=False, append_to: TickResult | None = None) -> TickResult | None:
-        if ignore_output:
-            self._inner.tick_until(t)
-            return None
+    def tick_until(self, t: int, append_to: TickResult | None = None) -> TickResult:
+        inner_result = self._inner.tick_until(t)
+        out_channel_spikes_data = {"t": inner_result.out_channel_spikes_ts,
+                                   "out_channel_id": inner_result.out_channel_spikes_ids}
+        neuron_spikes_data = {
+            "t": inner_result.neuron_spikes_ts, "nid": inner_result.neuron_spikes_ids}
+
+        df_out_channel_spikes = pd.DataFrame(
+            out_channel_spikes_data, dtype=np.int64)
+        df_neuron_spikes = pd.DataFrame(neuron_spikes_data, dtype=np.int64)
+
+        if append_to:
+            return concat_results(append_to, df_out_channel_spikes, df_neuron_spikes, inner_result.synaptic_transmission_count)
         else:
-            inner_result = self._inner.tick_until(t)
-            out_channel_spikes_data = {"t": inner_result.out_channel_spikes_ts,
-                                       "out_channel_id": inner_result.out_channel_spikes_ids}
-            neuron_spikes_data = {
-                "t": inner_result.neuron_spikes_ts, "nid": inner_result.neuron_spikes_ids}
+            return TickResult(df_out_channel_spikes, df_neuron_spikes, inner_result.synaptic_transmission_count)
 
-            df_out_channel_spikes = pd.DataFrame(
-                out_channel_spikes_data, dtype=np.int64)
-            df_neuron_spikes = pd.DataFrame(neuron_spikes_data, dtype=np.int64)
-
-            if append_to:
-                return concat_results(append_to, df_out_channel_spikes, df_neuron_spikes, inner_result.synaptic_transmission_count)
-            else:
-                return TickResult(df_out_channel_spikes, df_neuron_spikes, inner_result.synaptic_transmission_count)
-
-    def tick_for(self, t: int, ignore_output=False, append_to: Optional[TickResult] = None) -> Optional[TickResult]:
-        return self.tick_until(self.get_t() + t, ignore_output=ignore_output, append_to=append_to)
+    def tick_for(self, t: int, append_to: Optional[TickResult] = None) -> Optional[TickResult]:
+        return self.tick_until(self.get_t() + t, append_to=append_to)
 
     def extract_state_snapshot(self) -> StateSnapshot:
         inner_snapshot = self._inner.extract_state_snapshot()

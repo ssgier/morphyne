@@ -25,17 +25,6 @@ class ChecksumTest(unittest.TestCase):
 
         self.check_single_tick_result(tick_result, state_snapshot)
 
-    def test_ignore_output(self):
-        instance = mp.create_from_yaml(params_template.params_yaml, seed=0)
-        instance.set_non_coherent_stimulation_rate(0.01)
-        instance.set_reward_rate(0.002)
-        t_stop = 1000
-        instance.tick_until(t_stop, ignore_output=True)
-        instance.set_non_coherent_stimulation_rate(0.0)
-        tick_result = instance.tick()
-        state_snapshot = instance.extract_state_snapshot()
-        self.check_single_tick_result(tick_result, state_snapshot)
-
     def check_single_tick_result(self, tick_result, state_snapshot):
         voltage_checksum = state_snapshot.membrane_voltages.sum()
         synapse_state_checksum = state_snapshot.synapse_states.drop(columns=["projection_id"], inplace=False).product(
