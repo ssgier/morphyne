@@ -7,7 +7,10 @@ use pyo3::{exceptions::PyValueError, prelude::*};
 use rand::{prelude::Distribution, rngs::StdRng, seq::SliceRandom, SeedableRng};
 use serde::de::Error;
 use statrs::distribution::Poisson;
-use std::{collections::VecDeque, iter};
+use std::{
+    collections::{HashSet, VecDeque},
+    iter,
+};
 
 struct SpikeInfo {
     t: usize,
@@ -37,6 +40,13 @@ struct Instance {
     force_out_channel_stimuli: Vec<VecDeque<SpikeInfo>>,
 
     force_neuron_stimuli: Vec<VecDeque<SpikeInfo>>,
+}
+
+#[pyclass]
+enum SCMode {
+    Off,
+    Single,
+    Multi,
 }
 
 #[pyclass]
@@ -243,6 +253,19 @@ impl Instance {
         self.inner.reset_ephemeral_state();
     }
 
+    fn set_sc_mode(&mut self, sc_mode: &SCMode) {
+        let inner_sc_mode = match sc_mode {
+            SCMode::Off => morphine::api::SCMode::Off,
+            SCMode::Single => morphine::api::SCMode::Single,
+            SCMode::Multi => morphine::api::SCMode::Multi,
+        };
+        self.inner.set_sc_mode(inner_sc_mode);
+    }
+
+    fn flush_sc_hashes(&mut self) -> HashSet<u64> {
+        self.inner.flush_sc_hashes()
+    }
+
     fn apply_stimulus(&mut self, stimulus: &Stimulus) -> PyResult<()> {
         let tick_period = self.get_t();
         apply_stimulus_constituent(
@@ -417,6 +440,7 @@ fn morphyne(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(create_from_yaml, m)?)?;
     m.add_function(wrap_pyfunction!(create_from_json, m)?)?;
     m.add_class::<Stimulus>()?;
+    m.add_class::<SCMode>()?;
     Ok(())
 }
 
