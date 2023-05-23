@@ -121,8 +121,8 @@ class Instance:
         else:
             return TickResult(df_out_channel_spikes, df_neuron_spikes, inner_result.synaptic_transmission_count)
 
-    def tick_for(self, t: int, append_to: Optional[TickResult] = None) -> Optional[TickResult]:
-        return self.tick_until(self.get_t() + t, append_to=append_to)
+    def tick_for(self, t: int, append_to: Optional[TickResult] = None) -> TickResult:
+        return self.tick_until(self.get_next_t() + t, append_to=append_to)
 
     def extract_state_snapshot(self) -> StateSnapshot:
         inner_snapshot = self._inner.extract_state_snapshot()
@@ -154,8 +154,11 @@ class Instance:
     def flush_sc_hashes(self) -> set[int]:
         return self._inner.flush_sc_hashes()
 
-    def get_t(self) -> int:
-        return self._inner.get_t()
+    def get_next_t(self) -> int:
+        return self._inner.get_next_t()
+
+    def get_last_t(self) -> int:
+        return self._inner.get_last_t()
 
     def get_num_neurons(self) -> int:
         return self._inner.get_num_neurons()

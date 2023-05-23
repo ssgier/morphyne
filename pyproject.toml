@@ -17,4 +17,3 @@ dependencies = [
 
 [tool.maturin]
 python-source = "python"
-

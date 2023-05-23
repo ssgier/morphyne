@@ -8,7 +8,7 @@ class ChecksumTest(unittest.TestCase):
         instance = mp.create_from_yaml(params_template.params_yaml, seed=0)
         instance.set_non_coherent_stimulation_rate(0.01)
         instance.set_reward_rate(0.002)
-        t_stop = 1000
+        t_stop = 1001
         tick_result = instance.tick_until(t_stop)
 
         neuron_spike_checksum = tick_result.neuron_spikes.product(axis=1).sum()

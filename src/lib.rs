@@ -166,7 +166,7 @@ impl Instance {
 
         let mut tick_input = TickInput::new();
 
-        while self.inner.get_tick_period() < t {
+        while self.inner.get_next_tick_period() < t {
             tick_input.reset();
             tick_input.reward = self.reward_rate;
             self.add_stimulation(&mut tick_input);
@@ -197,7 +197,7 @@ impl Instance {
     fn tick_until_ignore_output(&mut self, t: usize) {
         let mut tick_input = TickInput::new();
 
-        while self.inner.get_tick_period() < t {
+        while self.inner.get_next_tick_period() < t {
             tick_input.reset();
             tick_input.reward = self.reward_rate;
             self.add_stimulation(&mut tick_input);
@@ -267,31 +267,35 @@ impl Instance {
     }
 
     fn apply_stimulus(&mut self, stimulus: &Stimulus) -> PyResult<()> {
-        let tick_period = self.get_t();
+        let next_tick_period = self.get_next_t();
         apply_stimulus_constituent(
             &stimulus.in_channel_spikes_ts,
             &stimulus.in_channel_spikes_ids,
             &mut self.in_channel_stimuli,
-            tick_period,
+            next_tick_period,
         )?;
         apply_stimulus_constituent(
             &stimulus.force_out_channel_spikes_ts,
             &stimulus.force_out_channel_spikes_ids,
             &mut self.force_out_channel_stimuli,
-            tick_period,
+            next_tick_period,
         )?;
         apply_stimulus_constituent(
             &stimulus.force_neuron_spikes_ts,
             &stimulus.force_neuron_spikes_ids,
             &mut self.force_neuron_stimuli,
-            tick_period,
+            next_tick_period,
         )?;
 
         Ok(())
     }
 
-    fn get_t(&self) -> usize {
-        self.inner.get_tick_period()
+    fn get_last_t(&self) -> usize {
+        self.inner.get_last_tick_period()
+    }
+
+    fn get_next_t(&self) -> usize {
+        self.inner.get_next_tick_period()
     }
 
     fn get_num_neurons(&self) -> usize {
@@ -321,24 +325,24 @@ impl Instance {
     }
 
     fn poll_stimulus_queues(&mut self, tick_input: &mut TickInput) {
-        let tick_period = self.get_t();
+        let next_tick_period = self.get_next_t();
 
         poll_stimulus_queue_group(
             &mut self.in_channel_stimuli,
             &mut tick_input.spiking_in_channel_ids,
-            tick_period,
+            next_tick_period,
         );
 
         poll_stimulus_queue_group(
             &mut self.force_out_channel_stimuli,
             &mut tick_input.force_spiking_out_channel_ids,
-            tick_period,
+            next_tick_period,
         );
 
         poll_stimulus_queue_group(
             &mut self.force_neuron_stimuli,
             &mut tick_input.force_spiking_nids,
-            tick_period,
+            next_tick_period,
         );
     }
 }
@@ -370,11 +374,11 @@ fn apply_stimulus_constituent(
 fn poll_stimulus_queue_group(
     queues: &mut Vec<VecDeque<SpikeInfo>>,
     target: &mut Vec<usize>,
-    tick_period: usize,
+    next_tick_period: usize,
 ) {
     for stimulus in queues.iter_mut() {
         while let Some(spike) = stimulus.front() {
-            if spike.t == tick_period + 1 {
+            if spike.t == next_tick_period {
                 target.push(spike.id);
             } else {
                 break;
@@ -461,11 +465,11 @@ mod tests {
         params.layers.push(layer_params);
 
         let mut stimulus = Stimulus::new();
-        stimulus.in_channel_spikes_ts.push(1);
+        stimulus.in_channel_spikes_ts.push(0);
         stimulus.in_channel_spikes_ids.push(0);
-        stimulus.force_out_channel_spikes_ts.push(1);
+        stimulus.force_out_channel_spikes_ts.push(0);
         stimulus.force_out_channel_spikes_ids.push(0);
-        stimulus.force_neuron_spikes_ts.push(1);
+        stimulus.force_neuron_spikes_ts.push(0);
         stimulus.force_neuron_spikes_ids.push(0);
 
         let mut instance = Instance {
@@ -479,7 +483,7 @@ mod tests {
             force_neuron_stimuli: Vec::new(),
         };
 
-        instance.apply_stimulus(&stimulus);
+        instance.apply_stimulus(&stimulus).unwrap();
 
         assert_eq!(instance.in_channel_stimuli.len(), 1);
         assert_eq!(instance.force_out_channel_stimuli.len(), 1);
