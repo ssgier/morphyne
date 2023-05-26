@@ -2,7 +2,6 @@ from typing import Optional
 import numpy as np
 import pandas as pd
 from .morphyne import Stimulus
-from .morphyne import SCMode
 from .morphyne import create_from_yaml as create_from_yaml_inner
 from .morphyne import create_from_json as create_from_json_inner
 import json
@@ -148,8 +147,14 @@ class Instance:
     def set_non_coherent_stimulation_rate(self, rate):
         self._inner.non_coherent_stimulation_rate = rate
 
-    def set_sc_mode(self, sc_mode: SCMode):
-        self._inner.set_sc_mode(sc_mode)
+    def set_sc_off(self):
+        self._inner.set_sc_off()
+
+    def set_sc_single(self, threshold):
+        self._inner.set_sc_single(threshold)
+
+    def set_sc_multi(self, threshold):
+        self._inner.set_sc_multi(threshold)
 
     def flush_sc_hashes(self) -> set[int]:
         return self._inner.flush_sc_hashes()

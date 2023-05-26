@@ -43,13 +43,6 @@ struct Instance {
 }
 
 #[pyclass]
-enum SCMode {
-    Off,
-    Single,
-    Multi,
-}
-
-#[pyclass]
 #[derive(Debug)]
 struct Stimulus {
     #[pyo3(get, set)]
@@ -253,13 +246,18 @@ impl Instance {
         self.inner.reset_ephemeral_state();
     }
 
-    fn set_sc_mode(&mut self, sc_mode: &SCMode) {
-        let inner_sc_mode = match sc_mode {
-            SCMode::Off => morphine::api::SCMode::Off,
-            SCMode::Single => morphine::api::SCMode::Single,
-            SCMode::Multi => morphine::api::SCMode::Multi,
-        };
-        self.inner.set_sc_mode(inner_sc_mode);
+    fn set_sc_off(&mut self) {
+        self.inner.set_sc_mode(morphine::api::SCMode::Off);
+    }
+
+    fn set_sc_single(&mut self, threshold: f32) {
+        self.inner
+            .set_sc_mode(morphine::api::SCMode::Single { threshold });
+    }
+
+    fn set_sc_multi(&mut self, threshold: f32) {
+        self.inner
+            .set_sc_mode(morphine::api::SCMode::Multi { threshold });
     }
 
     fn flush_sc_hashes(&mut self) -> HashSet<u64> {
@@ -444,14 +442,13 @@ fn morphyne(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(create_from_yaml, m)?)?;
     m.add_function(wrap_pyfunction!(create_from_json, m)?)?;
     m.add_class::<Stimulus>()?;
-    m.add_class::<SCMode>()?;
     Ok(())
 }
 
 #[cfg(test)]
 mod tests {
     use morphine::{
-        instance::{self},
+        instance,
         params::{InstanceParams, LayerParams},
     };
     use rand::{rngs::StdRng, SeedableRng};
