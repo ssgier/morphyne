@@ -74,6 +74,7 @@ example_params = {
                 "voltage_floor": -10
             },
             "plasticity_modulation_params": plasticity_modulation_params,
+            "use_para_spikes": False
         },
         {
             "num_neurons": num_I_neurons,
@@ -87,6 +88,7 @@ example_params = {
                 "voltage_floor": 0
             },
             "plasticity_modulation_params": plasticity_modulation_params,
+            "use_para_spikes": False
         },
     ],
     "layer_connections": [

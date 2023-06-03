@@ -181,7 +181,8 @@ def create_instance() -> mp.Instance:
                     "adaptation_threshold": 1,
                     "tau_threshold": 50,
                     "voltage_floor": 0
-                }
+                },
+                "use_para_spikes": False
             },
             {
                 "num_neurons": 5,
@@ -193,7 +194,8 @@ def create_instance() -> mp.Instance:
                     "adaptation_threshold": 1,
                     "tau_threshold": 50,
                     "voltage_floor": 0
-                }
+                },
+                "use_para_spikes": False
             },
             {
                 "num_neurons": 3,
@@ -205,7 +207,8 @@ def create_instance() -> mp.Instance:
                     "adaptation_threshold": 1,
                     "tau_threshold": 50,
                     "voltage_floor": 0
-                }
+                },
+                "use_para_spikes": False
             }
         ],
         "layer_connections": [

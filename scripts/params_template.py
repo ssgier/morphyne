@@ -16,6 +16,7 @@ layers:
     t_cutoff_eligibility_trace: 1500
     dopamine_flush_period: 250
     dopamine_conflation_period: 250
+  use_para_spikes: false
 - num_neurons: 200
   neuron_params:
     tau_membrane: 4.0
@@ -26,6 +27,7 @@ layers:
     tau_threshold: 50.0
     voltage_floor: 0.0
   plasticity_modulation_params: null
+  use_para_spikes: false
 layer_connections:
 - from_layer_id: 0
   to_layer_id: 0

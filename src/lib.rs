@@ -246,18 +246,22 @@ impl Instance {
         self.inner.reset_ephemeral_state();
     }
 
-    fn set_sc_off(&mut self) {
-        self.inner.set_sc_mode(morphine::api::SCMode::Off);
+    fn set_sc_off(&mut self) -> PyResult<()> {
+        self.inner
+            .set_sc_mode(morphine::api::SCMode::Off)
+            .map_err(|error| PyValueError::new_err(error.to_string()))
     }
 
-    fn set_sc_single(&mut self, threshold: f32) {
+    fn set_sc_single(&mut self, threshold: f32) -> PyResult<()> {
         self.inner
-            .set_sc_mode(morphine::api::SCMode::Single { threshold });
+            .set_sc_mode(morphine::api::SCMode::Single { threshold })
+            .map_err(|error| PyValueError::new_err(error.to_string()))
     }
 
-    fn set_sc_multi(&mut self, threshold: f32) {
+    fn set_sc_multi(&mut self, threshold: f32) -> PyResult<()> {
         self.inner
-            .set_sc_mode(morphine::api::SCMode::Multi { threshold });
+            .set_sc_mode(morphine::api::SCMode::Multi { threshold })
+            .map_err(|error| PyValueError::new_err(error.to_string()))
     }
 
     fn flush_sc_hashes(&mut self) -> HashSet<u64> {

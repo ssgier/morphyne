@@ -12,7 +12,8 @@ classifiers = [
 ]
 dependencies = [
     "numpy ~= 1.24.3",
-    "pandas ~= 2.0.1"
+    "pandas ~= 2.0.1",
+    "matplotlib ~= 3.7.1"
 ]
 
 [tool.maturin]
