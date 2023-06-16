@@ -19,8 +19,8 @@ conn_EX = {
             "tau_pre_after_post": 20,
         }
     },
-    "connect_density": 0.01,
-    "connect_width": 2,
+    "smooth_connect_probability": True,
+    "connect_width": 0.01,
     "conduction_delay_max_random_part": 10,
     "conduction_delay_add_on": 0,
     "allow_self_innervation": False,
@@ -39,8 +39,8 @@ conn_IX = {
         },
         "stp_params": "NoStp"
     },
-    "connect_density": 0.1,
-    "connect_width": 2,
+    "smooth_connect_probability": True,
+    "connect_width": 0.1,
     "conduction_delay_max_random_part": 0,
     "conduction_delay_add_on": 0,
     "allow_self_innervation": False,
@@ -61,6 +61,8 @@ plasticity_modulation_params = {
 # plasticity_modulation_params = None
 
 example_params = {
+    "position_dim": 1,
+    "hyper_sphere": False,
     "layers": [
         {
             "num_neurons": num_E_neurons,

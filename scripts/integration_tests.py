@@ -170,6 +170,8 @@ def prepare_instance() -> mp.Instance:
 
 def create_instance() -> mp.Instance:
     mp_params = {
+        "position_dim": 0,
+        "hyper_sphere": False,
         "layers": [
             {
                 "num_neurons": 6,
