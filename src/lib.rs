@@ -303,6 +303,14 @@ impl Instance {
     fn get_num_neurons(&self) -> usize {
         self.inner.get_num_neurons()
     }
+
+    fn get_num_in_channels(&self) -> usize {
+        self.inner.get_num_in_channels()
+    }
+
+    fn get_num_out_channels(&self) -> usize {
+        self.inner.get_num_out_channels()
+    }
 }
 
 impl Instance {
