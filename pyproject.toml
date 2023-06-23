@@ -11,7 +11,7 @@ classifiers = [
     "Programming Language :: Python :: Implementation :: PyPy",
 ]
 dependencies = [
-    "numpy ~= 1.24.3",
+    "numpy ~= 1.25.0",
     "pandas ~= 2.0.1",
     "matplotlib ~= 3.7.1"
 ]

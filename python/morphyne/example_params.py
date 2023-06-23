@@ -6,47 +6,35 @@ num_E_neurons = N - num_I_neurons
 conn_EX = {
     "from_layer_id": 0,
     "conduction_delay_position_distance_scale_factor": 0,
-    "projection_params": {
-        "synapse_params": {
-            "weight_scale_factor": 1,
-            "max_weight": 0.5
-        },
-        "stp_params": "NoStp",
-        "long_term_stdp_params": {
-            "factor_pre_before_post": 0.1,
-            "tau_pre_before_post": 20,
-            "factor_pre_after_post": -0.12,
-            "tau_pre_after_post": 20,
-        }
+    "weight_scale_factor": 1,
+    "max_syn_weight": 0.5,
+    "stp_params": "NoStp",
+    "long_term_stdp_params": {
+        "factor_pre_before_post": 0.1,
+        "tau_pre_before_post": 20,
+        "factor_pre_after_post": -0.12,
+        "tau_pre_after_post": 20,
     },
     "smooth_connect_probability": True,
     "connect_width": 0.01,
     "conduction_delay_max_random_part": 10,
     "conduction_delay_add_on": 0,
     "allow_self_innervation": False,
-    "initial_syn_weight": {
-        "Constant": 0.6
-    }
+    "initial_syn_weight": {"Constant": 0.6},
 }
 
 conn_IX = {
     "from_layer_id": 1,
     "conduction_delay_position_distance_scale_factor": 0,
-    "projection_params": {
-        "synapse_params": {
-            "weight_scale_factor": -1,
-            "max_weight": 10.0
-        },
-        "stp_params": "NoStp"
-    },
+    "weight_scale_factor": -1,
+    "max_syn_weight": 10.0,
+    "stp_params": "NoStp",
     "smooth_connect_probability": True,
     "connect_width": 0.1,
     "conduction_delay_max_random_part": 0,
     "conduction_delay_add_on": 0,
     "allow_self_innervation": False,
-    "initial_syn_weight": {
-        "Constant": 2.0
-    }
+    "initial_syn_weight": {"Constant": 2.0},
 }
 
 plasticity_modulation_params = {
@@ -55,7 +43,7 @@ plasticity_modulation_params = {
     "t_cutoff_eligibility_trace": 2,
     "dopamine_flush_period": 1,
     "dopamine_conflation_period": 1,
-    "dopamine_modulation_factor": 1.0
+    "dopamine_modulation_factor": 1.0,
 }
 
 # plasticity_modulation_params = None
@@ -73,10 +61,10 @@ example_params = {
                 "t_cutoff_coincidence": 25,
                 "adaptation_threshold": 1,
                 "tau_threshold": 50,
-                "voltage_floor": -10
+                "voltage_floor": -10,
             },
             "plasticity_modulation_params": plasticity_modulation_params,
-            "use_para_spikes": False
+            "use_para_spikes": False,
         },
         {
             "num_neurons": num_I_neurons,
@@ -87,24 +75,23 @@ example_params = {
                 "t_cutoff_coincidence": 1,
                 "adaptation_threshold": 1,
                 "tau_threshold": 50,
-                "voltage_floor": 0
+                "voltage_floor": 0,
             },
             "plasticity_modulation_params": plasticity_modulation_params,
-            "use_para_spikes": False
+            "use_para_spikes": False,
         },
     ],
-    "layer_connections": [
+    "projections": [
         conn_EX | {"to_layer_id": 0},
         conn_EX | {"to_layer_id": 1},
         conn_IX | {"to_layer_id": 0},
         conn_IX | {"to_layer_id": 1},
-
     ],
     "technical_params": {
         "num_threads": 10,
         "pin_threads": False,
         "seed_override": 0,
-    }
+    },
 }
 
 

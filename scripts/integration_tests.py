@@ -213,7 +213,7 @@ def create_instance() -> mp.Instance:
                 "use_para_spikes": False
             }
         ],
-        "layer_connections": [
+        "projections": [
         ],
         "technical_params": {
             "num_threads": 1,
